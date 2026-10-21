@@ -1,0 +1,129 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>住院照護系統</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif;background:#f4f6f8;color:#253344}
+header{background:#235b52;color:white;padding:22px 18px}
+header h1{font-size:22px;margin:0 0 6px}
+header p{margin:0;font-size:13px;opacity:.85}
+main{max-width:900px;margin:auto;padding:16px}
+.panel{background:white;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 8px #00000008}
+h2{font-size:17px;margin:0 0 14px}
+input,select,textarea,button{font:inherit}
+input,select,textarea{width:100%;padding:11px;border:1px solid #d5dce2;border-radius:8px;background:white}
+label{display:block;font-size:13px;margin:10px 0 6px}
+button{border:0;border-radius:8px;padding:11px 14px;background:#235b52;color:white;cursor:pointer}
+button.secondary{background:#e7efed;color:#235b52}
+button.danger{background:#a83232}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.animal{border:1px solid #e0e6e9;padding:13px;border-radius:10px;margin:10px 0}
+.animal.active{border:2px solid #448c7e;background:#f3faf8}
+.muted{font-size:12px;color:#687681}
+.tag{display:inline-block;border-radius:20px;background:#e7efed;padding:4px 9px;font-size:12px}
+.record{padding:10px 0;border-bottom:1px solid #e8ecef;font-size:14px;overflow-wrap:anywhere}
+.empty{color:#7c8790;font-size:14px}
+@media(min-width:650px){.layout{display:grid;grid-template-columns:0.9fr 1.4fr;gap:16px}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:420px){main{padding:10px}.panel{padding:13px}.grid{gap:8px}}
+</style>
+</head>
+<body>
+<header>
+<h1>🐾 住院照護系統</h1>
+<p>Veterinary Inpatient Care · 測試版本</p>
+</header>
+<main>
+<div class="panel">
+<h2>住院動物總覽</h2>
+<div class="grid">
+<div><div class="muted">住院中</div><strong id="count">0 隻</strong></div>
+<div><div class="muted">目前選取</div><strong id="selected">尚未選取</strong></div>
+</div>
+<p class="muted">此為本機測試雛形，資料暫存在目前瀏覽器，不適用於正式病歷。</p>
+</div>
+<div class="layout">
+<section>
+<div class="panel">
+<h2>住院動物清單</h2>
+<div id="animals"></div>
+</div>
+<div class="panel">
+<h2>＋ 新增住院動物</h2>
+<form id="animalForm">
+<label>動物名稱 *</label><input name="name" required placeholder="例如：小白">
+<div class="grid">
+<div><label>物種</label><select name="species"><option>犬</option><option>貓</option><option>其他</option></select></div>
+<div><label>體重（kg）</label><input name="weight" type="number" min="0" step="0.01" placeholder="例如：5.2"></div>
+</div>
+<label>住院原因</label><input name="reason" placeholder="例如：術後觀察">
+<div class="actions"><button type="submit">新增動物</button></div>
+</form>
+</div>
+</section>
+<section>
+<div class="panel">
+<h2>生命徵象紀錄</h2>
+<div id="patientHint" class="empty">請先從左側選取動物。</div>
+<form id="vitalForm" hidden>
+<div class="grid three">
+<div><label>心跳 HR（次／分）</label><input name="hr" type="number" min="0" placeholder="HR"></div>
+<div><label>呼吸 RR（次／分）</label><input name="rr" type="number" min="0" placeholder="RR"></div>
+<div><label>體溫（°C）</label><input name="temp" type="number" step="0.1" placeholder="°C"></div>
+<div><label>收縮壓 SYS</label><input name="sys" type="number" min="0"></div>
+<div><label>舒張壓 DIA</label><input name="dia" type="number" min="0"></div>
+<div><label>平均動脈壓 MAP</label><input name="map" type="number" min="0"></div>
+</div>
+<label>備註</label><textarea name="note" rows="2" placeholder="精神、食慾或其他觀察"></textarea>
+<div class="actions"><button type="submit">儲存紀錄</button></div>
+</form>
+</div>
+<div class="panel">
+<h2>照護紀錄時間軸</h2>
+<div id="records" class="empty">尚無紀錄</div>
+</div>
+</section>
+</div>
+</main>
+<script>
+const KEY="vet-care-demo-v1";
+let data=[];
+let active=null;
+try{data=JSON.parse(localStorage.getItem(KEY)||"[]");if(!Array.isArray(data))data=[]}catch(e){data=[]}
+function save(){localStorage.setItem(KEY,JSON.stringify(data))}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function current(){return data.find(a=>a.id===active)}
+function render(){
+document.getElementById("count").textContent=data.length+" 隻";
+document.getElementById("selected").textContent=current()?.name||"尚未選取";
+document.getElementById("animals").innerHTML=data.length?data.map(a=>`<div class="animal ${a.id===active?"active":""}"><strong>${esc(a.name)}</strong> <span class="tag">${esc(a.species)}</span><div class="muted">體重：${esc(a.weight||"未填")} kg</div><div class="muted">住院原因：${esc(a.reason||"未填")}</div><div class="actions"><button class="secondary" onclick="selectAnimal('${a.id}')">查看／紀錄</button><button class="danger" onclick="discharge('${a.id}')">移除</button></div></div>`).join(""):'<p class="empty">目前沒有住院動物，請新增一筆測試資料。</p>';
+document.getElementById("patientHint").hidden=!!current();
+document.getElementById("vitalForm").hidden=!current();
+const records=current()?.records||[];
+document.getElementById("records").innerHTML=records.length?[...records].reverse().map(r=>`<div class="record"><strong>${esc(r.time)}</strong><div>${esc(r.values)}</div>${r.note?`<div>備註：${esc(r.note)}</div>`:""}<div class="muted">紀錄人員：${esc(r.user||"未填")}</div></div>`).join(""):'<p class="empty">尚無紀錄</p>';
+}
+function selectAnimal(id){active=id;render()}
+function discharge(id){if(!confirm("確定從測試清單移除？"))return;data=data.filter(a=>a.id!==id);if(active===id)active=null;save();render()}
+document.getElementById("animalForm").addEventListener("submit",e=>{
+e.preventDefault();const f=new FormData(e.target);
+const a={id:Date.now().toString(),name:f.get("name").trim(),species:f.get("species"),weight:f.get("weight"),reason:f.get("reason").trim(),records:[]};
+data.push(a);active=a.id;save();e.target.reset();render();
+});
+document.getElementById("vitalForm").addEventListener("submit",e=>{
+e.preventDefault();const a=current();if(!a)return;
+const f=new FormData(e.target);
+const names=[["hr","HR"],["rr","RR"],["temp","體溫"],["sys","SYS"],["dia","DIA"],["map","MAP"]];
+const vals=names.filter(([k])=>f.get(k)!=="").map(([k,n])=>n+" "+f.get(k));
+if(!vals.length&&!f.get("note").trim()){alert("請至少填寫一項數值或備註");return}
+const user=prompt("請輸入紀錄人員代號（測試用）")||"未填";
+a.records.push({time:new Date().toLocaleString("zh-TW"),values:vals.join("｜")||"未填數值",note:f.get("note").trim(),user});
+save();e.target.reset();render();
+});
+render();
+</script>
+</body>
+</html>
