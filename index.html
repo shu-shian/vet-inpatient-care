@@ -281,6 +281,14 @@ function editRecord(animalId,recordId){
    <p>修改需要調整的欄位，其餘欄位可保持原樣。</p>
 
    <form id="editRecordForm">
+    <label style="display:block;margin-bottom:14px;">
+     紀錄時間
+     <input name="time" type="text"
+      value="${esc(r.time||"")}"
+      placeholder="例如：2026/10/21 下午 3:30:00"
+      style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">
+    </label>
+
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
      ${fields.map(([key,label])=>`
       <label style="display:block;">
@@ -325,8 +333,9 @@ function editRecord(animalId,recordId){
    .filter(([key])=>String(form.get(key)||"").trim()!=="")
    .map(([key])=>key+" "+String(form.get(key)).trim());
 
-  r.values=vals.join("｜")||"未填數值";
-  r.note=String(form.get("note")||"").trim();
+r.time=String(form.get("time")||"").trim()||r.time;
+r.values=vals.join("｜")||"未填數值";
+r.note=String(form.get("note")||"").trim();
 
   if(save()){
    overlay.remove();
