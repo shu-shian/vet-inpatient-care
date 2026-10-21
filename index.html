@@ -11,24 +11,27 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-s
 header{background:#235b52;color:white;padding:22px 18px}
 header h1{font-size:22px;margin:0 0 6px}
 header p{margin:0;font-size:13px;opacity:.85}
-main{max-width:900px;margin:auto;padding:16px}
+main{max-width:1100px;margin:auto;padding:16px}
 .panel{background:white;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 8px #00000008}
 h2{font-size:17px;margin:0 0 14px}
 input,select,textarea,button{font:inherit}
 input,select,textarea{width:100%;padding:11px;border:1px solid #d5dce2;border-radius:8px;background:white}
 label{display:block;font-size:13px;margin:10px 0 6px}
-button{border:0;border-radius:8px;padding:11px 14px;background:#235b52;color:white;cursor:pointer}
+button{border:0;border-radius:8px;padding:10px 12px;background:#235b52;color:white;cursor:pointer}
 button.secondary{background:#e7efed;color:#235b52}
-button.danger{background:#a83232}
+button.danger{background:#a83232;color:white}
+button:disabled{opacity:.5;cursor:not-allowed}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .animal{border:1px solid #e0e6e9;padding:13px;border-radius:10px;margin:10px 0}
 .animal.active{border:2px solid #448c7e;background:#f3faf8}
 .muted{font-size:12px;color:#687681}
 .tag{display:inline-block;border-radius:20px;background:#e7efed;padding:4px 9px;font-size:12px}
-.record{padding:10px 0;border-bottom:1px solid #e8ecef;font-size:14px;overflow-wrap:anywhere}
+.tag.out{background:#fce9e9;color:#a83232}
+.record{padding:12px 0;border-bottom:1px solid #e8ecef;font-size:14px;overflow-wrap:anywhere}
 .empty{color:#7c8790;font-size:14px}
-@media(min-width:650px){.layout{display:grid;grid-template-columns:0.9fr 1.4fr;gap:16px}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.status{margin:8px 0;color:#235b52;font-size:13px}
+@media(min-width:700px){.layout{display:grid;grid-template-columns:0.95fr 1.4fr;gap:16px}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:420px){main{padding:10px}.panel{padding:13px}.grid{gap:8px}}
 </style>
 </head>
@@ -42,30 +45,53 @@ button.danger{background:#a83232}
 <h2>住院動物總覽</h2>
 <div class="grid">
 <div><div class="muted">住院中</div><strong id="count">0 隻</strong></div>
-<div><div class="muted">目前選取</div><strong id="selected">尚未選取</strong></div>
+<div><div class="muted">已出院</div><strong id="dischargedCount">0 隻</strong></div>
 </div>
-<p class="muted">此為本機測試雛形，資料暫存在目前瀏覽器，不適用於正式病歷。</p>
+<p class="muted">測試版本：資料暫存在目前瀏覽器，不適用於正式病歷。請勿輸入真實飼主個資。</p>
 </div>
+
 <div class="layout">
 <section>
 <div class="panel">
 <h2>住院動物清單</h2>
+<label>顯示範圍</label>
+<select id="filter">
+<option value="all">全部動物</option>
+<option value="in">住院中</option>
+<option value="out">已出院</option>
+</select>
 <div id="animals"></div>
 </div>
+
 <div class="panel">
 <h2>＋ 新增住院動物</h2>
 <form id="animalForm">
-<label>動物名稱 *</label><input name="name" required placeholder="例如：小白">
+<label>動物名稱 *</label>
+<input name="name" required placeholder="例如：小白">
 <div class="grid">
-<div><label>物種</label><select name="species"><option>犬</option><option>貓</option><option>其他</option></select></div>
-<div><label>體重（kg）</label><input name="weight" type="number" min="0" step="0.01" placeholder="例如：5.2"></div>
+<div><label>物種</label>
+<select name="species"><option>犬</option><option>貓</option><option>其他</option></select></div>
+<div><label>體重（kg）</label>
+<input name="weight" type="number" min="0" step="0.01" placeholder="例如：5.2"></div>
 </div>
-<label>住院原因</label><input name="reason" placeholder="例如：術後觀察">
+<div class="grid">
+<div><label>入院日期</label><input name="admitDate" type="date"></div>
+<div><label>主治醫師</label><input name="doctor" placeholder="醫師姓名或代號"></div>
+</div>
+<label>住院原因</label>
+<input name="reason" placeholder="例如：術後觀察">
 <div class="actions"><button type="submit">新增動物</button></div>
 </form>
 </div>
 </section>
+
 <section>
+<div class="panel">
+<h2>動物資料</h2>
+<div id="patientInfo" class="empty">請先從左側選取動物。</div>
+<div id="patientActions" class="actions" hidden></div>
+</div>
+
 <div class="panel">
 <h2>生命徵象紀錄</h2>
 <div id="patientHint" class="empty">請先從左側選取動物。</div>
@@ -78,10 +104,12 @@ button.danger{background:#a83232}
 <div><label>舒張壓 DIA</label><input name="dia" type="number" min="0"></div>
 <div><label>平均動脈壓 MAP</label><input name="map" type="number" min="0"></div>
 </div>
-<label>備註</label><textarea name="note" rows="2" placeholder="精神、食慾或其他觀察"></textarea>
+<label>備註</label>
+<textarea name="note" rows="2" placeholder="精神、食慾或其他觀察"></textarea>
 <div class="actions"><button type="submit">儲存紀錄</button></div>
 </form>
 </div>
+
 <div class="panel">
 <h2>照護紀錄時間軸</h2>
 <div id="records" class="empty">尚無紀錄</div>
@@ -89,40 +117,186 @@ button.danger{background:#a83232}
 </section>
 </div>
 </main>
+
 <script>
 const KEY="vet-care-demo-v1";
 let data=[];
 let active=null;
-try{data=JSON.parse(localStorage.getItem(KEY)||"[]");if(!Array.isArray(data))data=[]}catch(e){data=[]}
-function save(){localStorage.setItem(KEY,JSON.stringify(data))}
-function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+function today(){
+ const d=new Date();
+ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function makeCaseNo(){
+ return "VC-"+Date.now().toString().slice(-8);
+}
+try{
+ data=JSON.parse(localStorage.getItem(KEY)||"[]");
+ if(!Array.isArray(data))data=[];
+}catch(e){data=[]}
+
+data.forEach(a=>{
+ if(!a.status)a.status="in";
+ if(!a.caseNo)a.caseNo=makeCaseNo();
+ if(!a.admitDate)a.admitDate="";
+ if(!a.doctor)a.doctor="";
+ if(!Array.isArray(a.records))a.records=[];
+});
+
+function save(){
+ try{
+  localStorage.setItem(KEY,JSON.stringify(data));
+  return true;
+ }catch(e){
+  alert("資料儲存失敗！可能是瀏覽器儲存空間不足，請勿關閉頁面，並先備份資料。");
+  return false;
+ }
+}
+function esc(s){
+ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
 function current(){return data.find(a=>a.id===active)}
+function fmtDate(s){return s?esc(s):"未填"}
 function render(){
-document.getElementById("count").textContent=data.length+" 隻";
-document.getElementById("selected").textContent=current()?.name||"尚未選取";
-document.getElementById("animals").innerHTML=data.length?data.map(a=>`<div class="animal ${a.id===active?"active":""}"><strong>${esc(a.name)}</strong> <span class="tag">${esc(a.species)}</span><div class="muted">體重：${esc(a.weight||"未填")} kg</div><div class="muted">住院原因：${esc(a.reason||"未填")}</div><div class="actions"><button class="secondary" onclick="selectAnimal('${a.id}')">查看／紀錄</button><button class="danger" onclick="discharge('${a.id}')">移除</button></div></div>`).join(""):'<p class="empty">目前沒有住院動物，請新增一筆測試資料。</p>';
-document.getElementById("patientHint").hidden=!!current();
-document.getElementById("vitalForm").hidden=!current();
-const records=current()?.records||[];
-document.getElementById("records").innerHTML=records.length?[...records].reverse().map(r=>`<div class="record"><strong>${esc(r.time)}</strong><div>${esc(r.values)}</div>${r.note?`<div>備註：${esc(r.note)}</div>`:""}<div class="muted">紀錄人員：${esc(r.user||"未填")}</div></div>`).join(""):'<p class="empty">尚無紀錄</p>';
+ const inCount=data.filter(a=>a.status!=="out").length;
+ document.getElementById("count").textContent=inCount+" 隻";
+ document.getElementById("dischargedCount").textContent=(data.length-inCount)+" 隻";
+
+ const filter=document.getElementById("filter").value;
+ const shown=data.filter(a=>filter==="all"||(filter==="in"&&a.status!=="out")||(filter==="out"&&a.status==="out"));
+ document.getElementById("animals").innerHTML=shown.length?shown.map(a=>`
+ <div class="animal ${a.id===active?"active":""}">
+ <strong>${esc(a.name)}</strong>
+ <span class="tag">${esc(a.species||"未填")}</span>
+ <span class="tag ${a.status==="out"?"out":""}">${a.status==="out"?"已出院":"住院中"}</span>
+ <div class="muted">住院編號：${esc(a.caseNo)}</div>
+ <div class="muted">入院日期：${fmtDate(a.admitDate)}</div>
+ <div class="muted">體重：${esc(a.weight||"未填")} kg</div>
+ <div class="muted">住院原因：${esc(a.reason||"未填")}</div>
+ <div class="muted">主治醫師：${esc(a.doctor||"未填")}</div>
+ <div class="actions">
+ <button class="secondary" onclick="selectAnimal('${a.id}')">查看／紀錄</button>
+ </div>
+ </div>`).join(""):'<p class="empty">此範圍目前沒有動物。</p>';
+
+ const a=current();
+ document.getElementById("patientHint").hidden=!!a;
+ document.getElementById("vitalForm").hidden=!a||a.status==="out";
+ document.getElementById("patientInfo").innerHTML=a?`
+ <strong>${esc(a.name)}</strong> <span class="tag">${a.status==="out"?"已出院":"住院中"}</span>
+ <div class="muted">住院編號：${esc(a.caseNo)}</div>
+ <div class="muted">物種：${esc(a.species||"未填")}　體重：${esc(a.weight||"未填")} kg</div>
+ <div class="muted">入院日期：${fmtDate(a.admitDate)}</div>
+ <div class="muted">主治醫師：${esc(a.doctor||"未填")}</div>
+ <div class="muted">住院原因：${esc(a.reason||"未填")}</div>
+ ${a.status==="out"?'<p class="status">此動物已出院，歷史紀錄仍保留。</p>':''}
+ `:'<span class="empty">請先從左側選取動物。</span>';
+
+ const pa=document.getElementById("patientActions");
+ pa.hidden=!a;
+ pa.innerHTML=a?`
+ <button class="secondary" onclick="editPatient('${a.id}')">編輯資料</button>
+ ${a.status==="out"
+ ?`<button onclick="readmit('${a.id}')">重新住院</button>`
+ :`<button onclick="discharge('${a.id}')">標記出院</button>`}
+ <button class="danger" onclick="removeAnimal('${a.id}')">手動移除動物</button>
+ `:"";
+
+ if(a&&a.status==="out"){
+  document.getElementById("patientHint").hidden=false;
+  document.getElementById("patientHint").textContent="此動物已出院。如需新增紀錄，請先重新住院。";
+ }
+
+ const records=a?.records||[];
+ document.getElementById("records").innerHTML=records.length?[...records].reverse().map(r=>`
+ <div class="record">
+ <strong>${esc(r.time)}</strong>
+ <div>${esc(r.values)}</div>
+ ${r.note?`<div>備註：${esc(r.note)}</div>`:""}
+ <div class="muted">紀錄人員：${esc(r.user||"未填")}</div>
+ <div class="actions"><button class="danger" onclick="deleteRecord('${a.id}','${r.id}')">刪除此筆紀錄</button></div>
+ </div>`).join(""):'<p class="empty">尚無紀錄</p>';
 }
 function selectAnimal(id){active=id;render()}
-function discharge(id){if(!confirm("確定從測試清單移除？"))return;data=data.filter(a=>a.id!==id);if(active===id)active=null;save();render()}
+function discharge(id){
+ const a=data.find(x=>x.id===id);if(!a)return;
+ if(!confirm("確定將「"+a.name+"」標記為已出院？原有資料與照護紀錄會保留。"))return;
+ a.status="out";
+ if(save())render();
+}
+function readmit(id){
+ const a=data.find(x=>x.id===id);if(!a)return;
+ if(!confirm("確定將「"+a.name+"」重新標記為住院中？"))return;
+ a.status="in";
+ if(save())render();
+}
+function removeAnimal(id){
+ const a=data.find(x=>x.id===id);if(!a)return;
+ const typed=prompt("這會從目前瀏覽器刪除此動物及其全部照護紀錄。\n若確定移除，請輸入動物名稱："+a.name);
+ if(typed!==a.name){alert("名稱不符，未移除資料。");return}
+ data=data.filter(x=>x.id!==id);
+ if(active===id)active=null;
+ if(save())render();
+}
+function deleteRecord(animalId,recordId){
+ const a=data.find(x=>x.id===animalId);if(!a)return;
+ const r=a.records.find(x=>x.id===recordId);if(!r)return;
+ if(!confirm("確定刪除這一筆照護紀錄？此操作無法直接復原。"))return;
+ a.records=a.records.filter(x=>x.id!==recordId);
+ if(save())render();
+}
+function editPatient(id){
+ const a=data.find(x=>x.id===id);if(!a)return;
+ const name=prompt("動物名稱：",a.name);if(name===null)return;
+ if(!name.trim()){alert("名稱不可空白。");return}
+ const weight=prompt("體重（kg）：",a.weight||"");if(weight===null)return;
+ const admitDate=prompt("入院日期（YYYY-MM-DD，可留空）：",a.admitDate||"");if(admitDate===null)return;
+ const doctor=prompt("主治醫師：",a.doctor||"");if(doctor===null)return;
+ const reason=prompt("住院原因：",a.reason||"");if(reason===null)return;
+ a.name=name.trim();a.weight=weight.trim();a.admitDate=admitDate.trim();a.doctor=doctor.trim();a.reason=reason.trim();
+ if(save())render();
+}
+document.getElementById("filter").addEventListener("change",render);
+
 document.getElementById("animalForm").addEventListener("submit",e=>{
-e.preventDefault();const f=new FormData(e.target);
-const a={id:Date.now().toString(),name:f.get("name").trim(),species:f.get("species"),weight:f.get("weight"),reason:f.get("reason").trim(),records:[]};
-data.push(a);active=a.id;save();e.target.reset();render();
+ e.preventDefault();
+ const f=new FormData(e.target);
+ const a={
+ id:Date.now().toString(),
+ caseNo:makeCaseNo(),
+ name:f.get("name").trim(),
+ species:f.get("species"),
+ weight:f.get("weight"),
+ reason:f.get("reason").trim(),
+ admitDate:f.get("admitDate")||today(),
+ doctor:f.get("doctor").trim(),
+ status:"in",
+ records:[]
+ };
+ data.push(a);active=a.id;
+ if(save()){e.target.reset();render()}
 });
+
 document.getElementById("vitalForm").addEventListener("submit",e=>{
-e.preventDefault();const a=current();if(!a)return;
-const f=new FormData(e.target);
-const names=[["hr","HR"],["rr","RR"],["temp","體溫"],["sys","SYS"],["dia","DIA"],["map","MAP"]];
-const vals=names.filter(([k])=>f.get(k)!=="").map(([k,n])=>n+" "+f.get(k));
-if(!vals.length&&!f.get("note").trim()){alert("請至少填寫一項數值或備註");return}
-const user=prompt("請輸入紀錄人員代號（測試用）")||"未填";
-a.records.push({time:new Date().toLocaleString("zh-TW"),values:vals.join("｜")||"未填數值",note:f.get("note").trim(),user});
-save();e.target.reset();render();
+ e.preventDefault();
+ const a=current();if(!a||a.status==="out")return;
+ const f=new FormData(e.target);
+ const names=[["hr","HR"],["rr","RR"],["temp","體溫"],["sys","SYS"],["dia","DIA"],["map","MAP"]];
+ const vals=names.filter(([k])=>f.get(k)!=="").map(([k,n])=>n+" "+f.get(k));
+ if(!vals.length&&!f.get("note").trim()){
+  alert("請至少填寫一項數值或備註");return;
+ }
+ const user=prompt("請輸入紀錄人員代號（測試用）")||"未填";
+ a.records.push({
+ id:Date.now().toString()+Math.random().toString(36).slice(2,7),
+ time:new Date().toLocaleString("zh-TW"),
+ values:vals.join("｜")||"未填數值",
+ note:f.get("note").trim(),
+ user
+ });
+ if(save()){e.target.reset();render()}
 });
+save();
 render();
 </script>
 </body>
