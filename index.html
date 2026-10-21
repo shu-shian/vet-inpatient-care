@@ -245,7 +245,10 @@ function editRecord(animalId,recordId){
  const a=data.find(x=>x.id===animalId);
  if(!a)return;
  const r=a.records.find(x=>x.id===recordId);
- if(!r)return;
+ if(!r){
+ alert("找不到這筆紀錄，可能是紀錄 ID 不一致。");
+ return;
+}
 
  const existing={};
  String(r.values||"").split("｜").forEach(part=>{
