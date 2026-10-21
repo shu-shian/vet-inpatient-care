@@ -244,11 +244,12 @@ function removeAnimal(id){
 function editRecord(animalId,recordId){
  const a=data.find(x=>x.id===animalId);
  if(!a)return;
+
  const r=a.records.find(x=>x.id===recordId);
  if(!r){
- alert("找不到這筆紀錄，可能是紀錄 ID 不一致。");
- return;
-}
+  alert("找不到這筆紀錄，可能是紀錄 ID 不一致。");
+  return;
+ }
 
  const existing={};
  String(r.values||"").split("｜").forEach(part=>{
@@ -266,25 +267,72 @@ function editRecord(animalId,recordId){
   ["DIA","舒張壓 DIA"],
   ["MAP","平均動脈壓 MAP"]
  ];
- const next={};
 
- for(const [key,label] of fields){
-  const value=prompt(label+"（留空代表不填）",existing[key]||"");
-  if(value===null)return;
-  if(value.trim()!=="")next[key]=value.trim();
- }
+ const old=document.getElementById("editRecordOverlay");
+ if(old)old.remove();
 
- const note=prompt("備註：",r.note||"");
- if(note===null)return;
+ const overlay=document.createElement("div");
+ overlay.id="editRecordOverlay";
+ overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto;";
 
- const vals=fields
-  .filter(([key])=>next[key]!==undefined)
-  .map(([key])=>key+" "+next[key]);
+ overlay.innerHTML=`
+  <div style="background:white;color:#222;width:min(100%,520px);max-height:90vh;overflow:auto;border-radius:14px;padding:20px;box-sizing:border-box;">
+   <h2 style="margin-top:0;">編輯照護紀錄</h2>
+   <p>修改需要調整的欄位，其餘欄位可保持原樣。</p>
 
- r.values=vals.join("｜")||"未填數值";
- r.note=note.trim();
+   <form id="editRecordForm">
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
+     ${fields.map(([key,label])=>`
+      <label style="display:block;">
+       ${label}
+       <input name="${key}" type="text" inputmode="decimal"
+        value="${esc(existing[key]||"")}"
+        style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">
+      </label>
+     `).join("")}
+    </div>
 
- if(save())render();
+    <label style="display:block;margin-top:14px;">
+     備註
+     <textarea name="note" rows="3"
+      style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">${esc(r.note||"")}</textarea>
+    </label>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+     <button type="button" id="cancelEditRecord" class="secondary">取消</button>
+     <button type="submit">儲存修改</button>
+    </div>
+   </form>
+  </div>
+ `;
+
+ document.body.appendChild(overlay);
+
+ overlay.querySelector("#cancelEditRecord").addEventListener("click",()=>{
+  overlay.remove();
+ });
+
+ overlay.addEventListener("click",e=>{
+  if(e.target===overlay)overlay.remove();
+ });
+
+ overlay.querySelector("#editRecordForm").addEventListener("submit",e=>{
+  e.preventDefault();
+
+  const form=new FormData(e.target);
+
+  const vals=fields
+   .filter(([key])=>String(form.get(key)||"").trim()!=="")
+   .map(([key])=>key+" "+String(form.get(key)).trim());
+
+  r.values=vals.join("｜")||"未填數值";
+  r.note=String(form.get("note")||"").trim();
+
+  if(save()){
+   overlay.remove();
+   render();
+  }
+ });
 }
  function deleteRecord(animalId,recordId){
  const a=data.find(x=>x.id===animalId);if(!a)return;
