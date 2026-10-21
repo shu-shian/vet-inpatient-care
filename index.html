@@ -141,6 +141,9 @@ data.forEach(a=>{
  if(!a.admitDate)a.admitDate="";
  if(!a.doctor)a.doctor="";
  if(!Array.isArray(a.records))a.records=[];
+a.records.forEach(r=>{
+ if(!r.id)r.id=Date.now().toString()+Math.random().toString(36).slice(2,9);
+});
 });
 
 function save(){
