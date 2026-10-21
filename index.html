@@ -104,6 +104,10 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <div><label>舒張壓 DIA</label><input name="dia" type="number" min="0"></div>
 <div><label>平均動脈壓 MAP</label><input name="map" type="number" min="0"></div>
 </div>
+ <div><label>血糖（mg/dL）</label><input name="glucose" type="number" min="0" step="any" placeholder="血糖數值"></div>
+<div><label>血糖備註</label><input name="glucoseNote" type="text" placeholder="例如：飯前、飯後"></div>
+<div><label>尿尿紀錄</label><textarea name="urine" rows="2" placeholder="尿量、顏色、排尿情況"></textarea></div>
+<div><label>便便紀錄</label><textarea name="stool" rows="2" placeholder="形狀、顏色、軟硬程度"></textarea></div>
 <label>備註</label>
 <textarea name="note" rows="2" placeholder="精神、食慾或其他觀察"></textarea>
 <div class="actions"><button type="submit">儲存紀錄</button></div>
@@ -469,17 +473,28 @@ document.getElementById("vitalForm").addEventListener("submit",e=>{
  const a=current();if(!a||a.status==="out")return;
  const f=new FormData(e.target);
  const names=[["hr","HR"],["rr","RR"],["temp","體溫"],["sys","SYS"],["dia","DIA"],["map","MAP"]];
- const vals=names.filter(([k])=>f.get(k)!=="").map(([k,n])=>n+" "+f.get(k));
- if(!vals.length&&!f.get("note").trim()){
-  alert("請至少填寫一項數值或備註");return;
- }
+const vals=names.filter(([k])=>f.get(k)!=="").map(([k,n])=>n+" "+f.get(k));
+if(f.get("glucose")!=="") vals.push("血糖 "+f.get("glucose")+" mg/dL");
+const glucoseNote=String(f.get("glucoseNote")||"").trim();
+const urine=String(f.get("urine")||"").trim();
+const stool=String(f.get("stool")||"").trim();
+const note=String(f.get("note")||"").trim();
+
+if(!vals.length&&!glucoseNote&&!urine&&!stool&&!note){
+  alert("請至少填寫一項數值或備註");
+  return;
+}
  const user=prompt("請輸入紀錄人員代號（測試用）")||"未填";
- a.records.push({
+a.records.push({
  id:Date.now().toString()+Math.random().toString(36).slice(2,7),
  time:new Date().toLocaleString("zh-TW"),
  values:vals.join("｜")||"未填數值",
- note:f.get("note").trim(),
+ glucoseNote,
+ urine,
+ stool,
+ note,
  user
+});
  });
  if(save()){e.target.reset();render()}
 });
