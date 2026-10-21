@@ -214,7 +214,7 @@ function render(){
  <div>${esc(r.values)}</div>
  ${r.note?`<div>備註：${esc(r.note)}</div>`:""}
  <div class="muted">紀錄人員：${esc(r.user||"未填")}</div>
- <div class="actions"><button class="danger" onclick="deleteRecord('${a.id}','${r.id}')">刪除此筆紀錄</button></div>
+ <div class="actions"><button class="secondary" onclick="editRecord('${a.id}','${r.id}')">編輯紀錄</button><button class="danger" onclick="deleteRecord('${a.id}','${r.id}')">刪除此筆紀錄</button></div>
  </div>`).join(""):'<p class="empty">尚無紀錄</p>';
 }
 function selectAnimal(id){active=id;render()}
@@ -238,7 +238,49 @@ function removeAnimal(id){
  if(active===id)active=null;
  if(save())render();
 }
-function deleteRecord(animalId,recordId){
+function editRecord(animalId,recordId){
+ const a=data.find(x=>x.id===animalId);
+ if(!a)return;
+ const r=a.records.find(x=>x.id===recordId);
+ if(!r)return;
+
+ const existing={};
+ String(r.values||"").split("｜").forEach(part=>{
+  const idx=part.indexOf(" ");
+  if(idx>0){
+   existing[part.slice(0,idx)]=part.slice(idx+1);
+  }
+ });
+
+ const fields=[
+  ["HR","心跳 HR"],
+  ["RR","呼吸 RR"],
+  ["體溫","體溫"],
+  ["SYS","收縮壓 SYS"],
+  ["DIA","舒張壓 DIA"],
+  ["MAP","平均動脈壓 MAP"]
+ ];
+ const next={};
+
+ for(const [key,label] of fields){
+  const value=prompt(label+"（留空代表不填）",existing[key]||"");
+  if(value===null)return;
+  if(value.trim()!=="")next[key]=value.trim();
+ }
+
+ const note=prompt("備註：",r.note||"");
+ if(note===null)return;
+
+ const vals=fields
+  .filter(([key])=>next[key]!==undefined)
+  .map(([key])=>key+" "+next[key]);
+
+ r.values=vals.join("｜")||"未填數值";
+ r.note=note.trim();
+
+ if(save())render();
+}
+ function deleteRecord(animalId,recordId){
  const a=data.find(x=>x.id===animalId);if(!a)return;
  const r=a.records.find(x=>x.id===recordId);if(!r)return;
  if(!confirm("確定刪除這一筆照護紀錄？此操作無法直接復原。"))return;
