@@ -351,19 +351,101 @@ r.note=String(form.get("note")||"").trim();
  if(save())render();
 }
 function editPatient(id){
- const a=data.find(x=>x.id===id);if(!a)return;
- const name=prompt("動物名稱：",a.name);if(name===null)return;
- if(!name.trim()){alert("名稱不可空白。");return}
- const weight=prompt("體重（kg）：",a.weight||"");if(weight===null)return;
- const admitDate=prompt("入院日期（YYYY-MM-DD，可留空）：",a.admitDate||"");if(admitDate===null)return;
- const doctor=prompt("主治醫師：",a.doctor||"");if(doctor===null)return;
- const reason=prompt("住院原因：",a.reason||"");if(reason===null)return;
- a.name=name.trim();a.weight=weight.trim();a.admitDate=admitDate.trim();a.doctor=doctor.trim();a.reason=reason.trim();
- if(save())render();
-}
-document.getElementById("filter").addEventListener("change",render);
+ const a=data.find(x=>x.id===id);
+ if(!a)return;
 
-document.getElementById("animalForm").addEventListener("submit",e=>{
+ const old=document.getElementById("editPatientOverlay");
+ if(old)old.remove();
+
+ const overlay=document.createElement("div");
+ overlay.id="editPatientOverlay";
+ overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto;";
+
+ overlay.innerHTML=`
+  <div style="background:white;color:#222;width:min(100%,520px);max-height:90vh;overflow:auto;border-radius:14px;padding:20px;box-sizing:border-box;">
+   <h2 style="margin-top:0;">編輯動物資料</h2>
+   <p>修改需要調整的欄位，其餘資料可保持原樣。</p>
+
+   <form id="editPatientForm">
+    <label style="display:block;margin-bottom:12px;">
+     動物名稱
+     <input name="name" type="text" required value="${esc(a.name||"")}"
+      style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">
+    </label>
+
+    <label style="display:block;margin-bottom:12px;">
+     動物種類
+     <input name="species" type="text" value="${esc(a.species||"")}"
+      style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">
+    </label>
+
+    <label style="display:block;margin-bottom:12px;">
+     體重（kg）
+     <input name="weight" type="text" inputmode="decimal" value="${esc(a.weight||"")}"
+      style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">
+    </label>
+
+    <label style="display:block;margin-bottom:12px;">
+     入院日期
+     <input name="admitDate" type="date" value="${esc(a.admitDate||"")}"
+      style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">
+    </label>
+
+    <label style="display:block;margin-bottom:12px;">
+     主治醫師
+     <input name="doctor" type="text" value="${esc(a.doctor||"")}"
+      style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">
+    </label>
+
+    <label style="display:block;margin-bottom:16px;">
+     住院原因
+     <textarea name="reason" rows="3"
+      style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">${esc(a.reason||"")}</textarea>
+    </label>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+     <button type="button" id="cancelEditPatient" class="secondary">取消</button>
+     <button type="submit">儲存修改</button>
+    </div>
+   </form>
+  </div>
+ `;
+
+ document.body.appendChild(overlay);
+
+ overlay.querySelector("#cancelEditPatient").addEventListener("click",()=>overlay.remove());
+
+ overlay.addEventListener("click",e=>{
+  if(e.target===overlay)overlay.remove();
+ });
+
+ overlay.querySelector("#editPatientForm").addEventListener("submit",e=>{
+  e.preventDefault();
+
+  const form=new FormData(e.target);
+  const name=String(form.get("name")||"").trim();
+
+  if(!name){
+   alert("名稱不可空白。");
+   return;
+  }
+
+  a.name=name;
+  a.species=String(form.get("species")||"").trim();
+  a.weight=String(form.get("weight")||"").trim();
+  a.admitDate=String(form.get("admitDate")||"").trim();
+  a.doctor=String(form.get("doctor")||"").trim();
+  a.reason=String(form.get("reason")||"").trim();
+
+  if(save()){
+   overlay.remove();
+   render();
+  }
+ });
+}
+
+document.getElementById("filter").addEventListener("change",render);
+ document.getElementById("animalForm").addEventListener("submit",e=>{
  e.preventDefault();
  const f=new FormData(e.target);
  const a={
