@@ -269,6 +269,13 @@ function editRecord(animalId,recordId){
   }
  });
 
+ const species=String(a.species||"").trim();
+ const isCat=species.includes("貓")||species.toLowerCase().includes("cat");
+
+ const bpRanges=isCat
+  ? {SYS:"80–140",DIA:"55–75",MAP:"60–100"}
+  : {SYS:"90–140",DIA:"50–80",MAP:"60–100"};
+
  const fields=[
   ["HR","心跳 HR"],
   ["RR","呼吸 RR"],
@@ -300,12 +307,14 @@ function editRecord(animalId,recordId){
     </label>
 
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
+    
      ${fields.map(([key,label])=>`
       <label style="display:block;">
        ${label}
        <input name="${key}" type="text" inputmode="decimal"
         value="${esc(existing[key]||"")}"
         style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">
+       ${bpRanges[key]?`<small style="display:block;color:#64748b;margin-top:4px;">參考範圍：${bpRanges[key]} mmHg</small>`:""}
       </label>
      `).join("")}
 
