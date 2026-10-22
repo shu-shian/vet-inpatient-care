@@ -215,13 +215,19 @@ function render(){
  }
 
  const records=a?.records||[];
- document.getElementById("records").innerHTML=records.length?[...records].reverse().map(r=>`
+document.getElementById("records").innerHTML=records.length?[...records].reverse().map(r=>`
  <div class="record">
  <strong>${esc(r.time)}</strong>
- <div>${esc(r.values)}</div>
+ <div>${esc(r.values||"未填數值")}</div>
+ ${r.glucoseNote?`<div>血糖備註：${esc(r.glucoseNote)}</div>`:""}
+ ${r.urine?`<div>尿尿紀錄：${esc(r.urine)}</div>`:""}
+ ${r.stool?`<div>便便紀錄：${esc(r.stool)}</div>`:""}
  ${r.note?`<div>備註：${esc(r.note)}</div>`:""}
  <div class="muted">紀錄人員：${esc(r.user||"未填")}</div>
- <div class="actions"><button class="secondary" onclick="editRecord('${a.id}','${r.id}')">編輯紀錄</button><button class="danger" onclick="deleteRecord('${a.id}','${r.id}')">刪除此筆紀錄</button></div>
+ <div class="actions">
+ <button class="secondary" onclick="editRecord('${a.id}','${r.id}')">編輯紀錄</button>
+ <button class="danger" onclick="deleteRecord('${a.id}','${r.id}')">刪除此筆紀錄</button>
+ </div>
  </div>`).join(""):'<p class="empty">尚無紀錄</p>';
 }
 function selectAnimal(id){active=id;render()}
@@ -302,7 +308,34 @@ function editRecord(animalId,recordId){
         style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">
       </label>
      `).join("")}
+
+     <label style="display:block;">
+      血糖（mg/dL）
+      <input name="glucose" type="number" min="0" step="any"
+value="${esc(String(existing["血糖"]||"").replace(/\s*mg\/dL$/i,""))}"
+       style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">
+     </label>
     </div>
+
+    <label style="display:block;margin-top:14px;">
+     血糖備註
+     <input name="glucoseNote" type="text"
+      value="${esc(r.glucoseNote||"")}"
+      placeholder="例如：飯前、飯後"
+      style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">
+    </label>
+
+    <label style="display:block;margin-top:14px;">
+     尿尿紀錄
+     <textarea name="urine" rows="2"
+      style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">${esc(r.urine||"")}</textarea>
+    </label>
+
+    <label style="display:block;margin-top:14px;">
+     便便紀錄
+     <textarea name="stool" rows="2"
+      style="display:block;width:100%;box-sizing:border-box;padding:10px;margin-top:5px;">${esc(r.stool||"")}</textarea>
+    </label>
 
     <label style="display:block;margin-top:14px;">
      備註
@@ -328,7 +361,7 @@ function editRecord(animalId,recordId){
   if(e.target===overlay)overlay.remove();
  });
 
- overlay.querySelector("#editRecordForm").addEventListener("submit",e=>{
+overlay.querySelector("#editRecordForm").addEventListener("submit",e=>{
   e.preventDefault();
 
   const form=new FormData(e.target);
@@ -337,9 +370,17 @@ function editRecord(animalId,recordId){
    .filter(([key])=>String(form.get(key)||"").trim()!=="")
    .map(([key])=>key+" "+String(form.get(key)).trim());
 
-r.time=String(form.get("time")||"").trim()||r.time;
-r.values=vals.join("｜")||"未填數值";
-r.note=String(form.get("note")||"").trim();
+  const glucose=String(form.get("glucose")||"").trim();
+  if(glucose!==""){
+   vals.push("血糖 "+glucose+" mg/dL");
+  }
+
+  r.time=String(form.get("time")||"").trim()||r.time;
+  r.values=vals.join("｜")||"未填數值";
+  r.glucoseNote=String(form.get("glucoseNote")||"").trim();
+  r.urine=String(form.get("urine")||"").trim();
+  r.stool=String(form.get("stool")||"").trim();
+  r.note=String(form.get("note")||"").trim();
 
   if(save()){
    overlay.remove();
